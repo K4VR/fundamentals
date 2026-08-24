@@ -1,6 +1,6 @@
 # Fundamentals
 
-Advanced Peer-to-Peer fundamental stock analysis. Enter a ticker to populate the worksheet and scored summary — the same criteria as the Payne's Education Advanced P2P spreadsheet.
+Advanced Peer-to-Peer fundamental stock analysis. Enter up to four tickers to compare competitors as columns — the same criteria as the Payne's Education Advanced P2P spreadsheet.
 
 ## No npm on your computer
 
@@ -11,7 +11,7 @@ You do **not** need Node.js or npm installed locally. The app is built and run i
 1. Sign in at [render.com](https://render.com).
 2. **New → Blueprint** and connect **this** GitHub repo (`fundamentals`).
 3. Render reads `render.yaml`, builds in the cloud, and gives you a URL like `https://fundamentals-xxxx.onrender.com`.
-4. Bookmark that URL — enter a ticker and analyze. Nothing is stored.
+4. Bookmark that URL — enter up to four tickers and compare. Nothing is stored.
 
 Render’s free tier may sleep after inactivity; the first request after sleep can take ~30 seconds.
 
@@ -30,7 +30,7 @@ Live fetches need the Render backend from above, then either:
 
 - **Advanced P2P** — full criteria worksheet (price, margins, growth, valuation, dividends, etc.)
 - **Scored P2P** — segment scores and grand total (out of 20)
-- **One ticker in** — manual refresh when researching; nothing is stored
+- **Up to four tickers** — each symbol is a column so you can compare competitors; nothing is stored
 
 ## Data sources
 

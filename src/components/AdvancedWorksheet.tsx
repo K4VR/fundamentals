@@ -208,8 +208,11 @@ function buildRows(w: WorksheetValues): Array<{ section?: string; rows: Row[] }>
   ]
 }
 
-export function AdvancedWorksheet({ worksheet }: { worksheet: WorksheetValues }) {
-  const sections = buildRows(worksheet)
+export function AdvancedWorksheet({ worksheets }: { worksheets: WorksheetValues[] }) {
+  if (!worksheets.length) return null
+  const allSections = worksheets.map((worksheet) => buildRows(worksheet))
+  const sections = allSections[0]
+  const colSpan = 1 + worksheets.length
 
   return (
     <section className="worksheet-panel">
@@ -217,8 +220,9 @@ export function AdvancedWorksheet({ worksheet }: { worksheet: WorksheetValues })
         <thead>
           <tr>
             <th>Criteria</th>
-            <th>{worksheet.ticker}</th>
-            <th>Notes</th>
+            {worksheets.map((worksheet) => (
+              <th key={worksheet.ticker}>{worksheet.ticker}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -226,15 +230,27 @@ export function AdvancedWorksheet({ worksheet }: { worksheet: WorksheetValues })
             ...(section.section
               ? [
                   <tr key={`section-${si}`} className="worksheet-section">
-                    <td colSpan={3}>{section.section}</td>
+                    <td colSpan={colSpan}>{section.section}</td>
                   </tr>,
                 ]
               : []),
-            ...section.rows.map((row) => (
-              <tr key={row.label} className={row.highlight ? `highlight-${row.highlight}` : undefined}>
+            ...section.rows.map((row, ri) => (
+              <tr key={row.label}>
                 <td>{row.label}</td>
-                <td>{row.value}</td>
-                <td className="worksheet-notes">{row.extra ?? ''}</td>
+                {worksheets.map((worksheet, ti) => {
+                  const cell = allSections[ti][si]?.rows[ri] ?? { label: row.label, value: '—' }
+                  return (
+                    <td
+                      key={worksheet.ticker}
+                      className={['peer-cell', cell.highlight ? `highlight-${cell.highlight}` : '']
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      {cell.value}
+                      {cell.extra ? <span className="worksheet-notes"> {cell.extra}</span> : null}
+                    </td>
+                  )
+                })}
               </tr>
             )),
           ])}

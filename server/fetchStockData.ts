@@ -24,6 +24,9 @@ const emptyYahoo: RawStockData['yahoo'] = {
   dividendHistory: [],
 }
 
+const MACRO_TTL_MS = 15 * 60 * 1000
+let macroCache: { value: { sp500Yield: number | null; treasury10Y: number | null }; at: number } | null = null
+
 function isRateLimited(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error)
   return /429|too many requests|failed to get crumb/i.test(message)
@@ -105,15 +108,19 @@ function annualFromYahoo(rows: Array<Record<string, unknown>>): AnnualFinancials
 }
 
 async function fetchMacro(): Promise<{ sp500Yield: number | null; treasury10Y: number | null }> {
+  const now = Date.now()
+  if (macroCache && now - macroCache.at < MACRO_TTL_MS) return macroCache.value
   try {
     const tnx = await withRetry(() => yf.quote('^TNX'))
     const spy = await withRetry(() => yf.quoteSummary('SPY', { modules: ['summaryDetail'] }))
-    return {
+    const value = {
       treasury10Y: typeof tnx.regularMarketPrice === 'number' ? tnx.regularMarketPrice / 100 : null,
       sp500Yield: spy.summaryDetail?.dividendYield ?? null,
     }
+    macroCache = { value, at: now }
+    return value
   } catch {
-    return { sp500Yield: null, treasury10Y: null }
+    return macroCache?.value ?? { sp500Yield: null, treasury10Y: null }
   }
 }
 
