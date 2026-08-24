@@ -19,10 +19,12 @@ Render’s free tier may sleep after inactivity; the first request after sleep c
 
 **https://k4vr.github.io/fundamentals/**
 
-GitHub Actions builds the UI automatically. Live ticker fetches need a backend:
+GitHub Actions builds the UI automatically. GitHub Pages cannot run the Node scraper, so a ticker lookup would otherwise get an HTML 404 and fail with `Unexpected token '<'`.
 
-- Deploy on Render (above), then in this repo **Settings → Secrets and variables → Actions → Variables**, set `FUNDAMENTALS_API_URL` to your Render URL (no trailing slash).
-- Re-run the Pages deploy workflow so the UI calls that API.
+Live fetches need the Render backend from above, then either:
+
+- Paste the Render origin into **API base URL** on the Pages site (saved in this browser), or open `https://k4vr.github.io/fundamentals/?api=https://YOUR-SERVICE.onrender.com`
+- Or in this repo **Settings → Secrets and variables → Actions → Variables**, set `FUNDAMENTALS_API_URL` to your Render URL (no trailing slash) and re-run the Pages deploy workflow.
 
 ## What it does
 

@@ -3,7 +3,14 @@ import type { AnalysisResult } from './types.ts'
 import { AdvancedWorksheet } from './components/AdvancedWorksheet.tsx'
 import { ScoredWorksheet } from './components/ScoredWorksheet.tsx'
 import { TickerBar } from './components/TickerBar.tsx'
-import { analyzeTicker, isLikelyStaticHost } from './lib/api.ts'
+import {
+  analyzeTicker,
+  bakedApiUrl,
+  getRuntimeApiUrl,
+  pingApi,
+  setRuntimeApiUrl,
+  StaticHostError,
+} from './lib/api.ts'
 
 type Tab = 'advanced' | 'scored'
 
@@ -13,6 +20,11 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [apiInput, setApiInput] = useState(() => getRuntimeApiUrl())
+  const [apiStatus, setApiStatus] = useState<string | null>(null)
+  const [showApiForm, setShowApiForm] = useState(
+    () => typeof window !== 'undefined' && window.location.hostname.includes('github.io') && !bakedApiUrl(),
+  )
 
   const analyze = useCallback(async (symbol: string) => {
     const next = symbol.trim().toUpperCase()
@@ -22,21 +34,41 @@ export default function App() {
     setError(null)
     try {
       const data = await analyzeTicker(next)
-      setResult(data as AnalysisResult)
+      setResult(data)
     } catch (err) {
       setResult(null)
-      const message = err instanceof Error ? err.message : 'Analysis failed.'
-      if (isLikelyStaticHost() && message.toLowerCase().includes('fetch')) {
-        setError(
-          'Live data is not available on the GitHub Pages preview alone. Use the full hosted app (Render) or ask to have FUNDAMENTALS_API_URL configured for this site.',
-        )
+      if (err instanceof StaticHostError) {
+        setShowApiForm(true)
+        setError(err.message)
       } else {
+        const message = err instanceof Error ? err.message : 'Analysis failed.'
+        if (message.includes('web page instead of JSON') || message.includes('non-JSON')) {
+          setShowApiForm(true)
+        }
         setError(message)
       }
     } finally {
       setLoading(false)
     }
   }, [])
+
+  async function saveApiUrl() {
+    const cleaned = setRuntimeApiUrl(apiInput)
+    setApiInput(cleaned)
+    if (!cleaned) {
+      setApiStatus('Paste the https origin of your Render service.')
+      return
+    }
+    setApiStatus('Checking API…')
+    try {
+      await pingApi(cleaned)
+      setApiStatus(`Saved. Live fetches will use ${cleaned}`)
+      setError(null)
+      if (ticker) void analyze(ticker)
+    } catch (err) {
+      setApiStatus(err instanceof Error ? err.message : 'Could not reach that API URL.')
+    }
+  }
 
   return (
     <div className="fundamentals">
@@ -62,7 +94,7 @@ export default function App() {
 
         {error ? <p className="fundamentals-error">{error}</p> : null}
 
-        {!result && !loading && !error ? (
+        {!result && !loading ? (
           <section className="fundamentals-empty">
             <h1>Fundamental stock evaluation</h1>
             <p>
@@ -79,14 +111,39 @@ export default function App() {
                 <a href="https://render.com/docs/infrastructure-as-code" target="_blank" rel="noreferrer">
                   Render
                 </a>{' '}
-                using the repo&apos;s <code>render.yaml</code> (Render installs Node and builds in the cloud).
+                using this repo&apos;s <code>render.yaml</code> (Render installs Node and builds in the cloud).
               </li>
               <li>
                 <strong>GitHub Pages</strong> hosts this UI at{' '}
-                <code>/my-cursor-projects/fundamentals/</code> — set repo variable{' '}
-                <code>FUNDAMENTALS_API_URL</code> to point at your Render service for live fetches.
+                <a href="https://k4vr.github.io/fundamentals/">https://k4vr.github.io/fundamentals/</a>. Pages
+                cannot scrape Yahoo/Finviz by itself — point it at your Render URL below, or set repo variable{' '}
+                <code>FUNDAMENTALS_API_URL</code> and rebuild.
               </li>
             </ul>
+            {showApiForm ? (
+              <form
+                className="api-source"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void saveApiUrl()
+                }}
+              >
+                <label htmlFor="api-url-input">API base URL (Render)</label>
+                <div className="api-source-row">
+                  <input
+                    id="api-url-input"
+                    type="url"
+                    value={apiInput}
+                    onChange={(e) => setApiInput(e.target.value)}
+                    placeholder="https://fundamentals-xxxx.onrender.com"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <button type="submit">Save API URL</button>
+                </div>
+                {apiStatus ? <p className="api-source-status">{apiStatus}</p> : null}
+              </form>
+            ) : null}
           </section>
         ) : null}
 

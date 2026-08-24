@@ -184,6 +184,56 @@ html.fundamentals-root .fundamentals-error {
   color: var(--fn-red);
 }
 
+html.fundamentals-root .api-source {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--fn-line);
+  border-radius: 12px;
+  background: rgba(106, 166, 255, 0.06);
+}
+
+html.fundamentals-root .api-source label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--fn-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+html.fundamentals-root .api-source-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+html.fundamentals-root .api-source-row input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--fn-line);
+  background: var(--fn-bg-2);
+  color: var(--fn-ink);
+  font: 500 0.92rem var(--fn-mono);
+}
+
+html.fundamentals-root .api-source-row button {
+  padding: 0.6rem 0.95rem;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(106, 166, 255, 0.9);
+  color: #081018;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+html.fundamentals-root .api-source-status {
+  margin: 0.65rem 0 0;
+  color: var(--fn-gold);
+  font-size: 0.88rem;
+}
+
 html.fundamentals-root .fundamentals-meta {
   display: grid;
   grid-template-columns: 1fr auto;
