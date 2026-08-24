@@ -74,6 +74,7 @@ export function formatMarginYoY(value: import('../src/types.js').MarginYoY): str
 
 export async function fetchText(url: string): Promise<string> {
   const resp = await fetch(url, { headers: { 'User-Agent': UA } })
+  if (resp.status === 429) throw new Error(`Fetch failed (429 Too Many Requests): ${url}`)
   if (!resp.ok) throw new Error(`Fetch failed (${resp.status}): ${url}`)
   return resp.text()
 }
