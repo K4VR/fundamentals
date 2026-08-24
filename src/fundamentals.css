@@ -152,6 +152,13 @@ html.fundamentals-root .ticker-bar input {
   text-transform: uppercase;
 }
 
+html.fundamentals-root .ticker-bar input::placeholder {
+  color: var(--fn-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
 html.fundamentals-root .ticker-bar button {
   padding: 0.65rem 1.1rem;
   border: 0;
@@ -172,6 +179,15 @@ html.fundamentals-root .ticker-progress {
   margin: 0;
   color: var(--fn-gold);
   font-size: 0.88rem;
+}
+
+html.fundamentals-root .fundamentals-loading {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px dashed var(--fn-line);
+  border-radius: var(--fn-radius);
+  color: var(--fn-gold);
+  font-family: var(--fn-mono);
 }
 
 html.fundamentals-root .fundamentals-empty {
@@ -371,10 +387,15 @@ html.fundamentals-root .worksheet-table td:first-child {
   color: var(--fn-muted);
 }
 
+html.fundamentals-root .worksheet-table th:not(:first-child) {
+  text-align: right;
+}
+
 html.fundamentals-root .worksheet-table td.peer-cell {
   font-family: var(--fn-mono);
   font-weight: 600;
   min-width: 7.5rem;
+  text-align: right;
 }
 
 html.fundamentals-root .worksheet-section td {

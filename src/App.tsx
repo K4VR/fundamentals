@@ -36,7 +36,10 @@ export default function App() {
       setError(err instanceof Error ? err.message : 'Enter a valid ticker symbol.')
       return
     }
-    if (!list.length) return
+    if (!list.length) {
+      setError('Enter at least one ticker to compare.')
+      return
+    }
 
     setTickers(list)
     setLoading(true)
@@ -123,12 +126,17 @@ export default function App() {
 
         {error ? <p className="fundamentals-error">{error}</p> : null}
 
+        {loading && !results.length ? (
+          <p className="fundamentals-loading">{progress ?? 'Fetching ticker data…'}</p>
+        ) : null}
+
         {!results.length && !loading ? (
           <section className="fundamentals-empty">
             <h1>Fundamental stock evaluation</h1>
             <p>
-              Enter up to four tickers to compare competitors side by side on the Advanced Peer-to-Peer worksheet.
-              Data is pulled from Yahoo Finance and Finviz, matching the spreadsheet workflow.
+              Enter up to four tickers (or keep the examples) to compare competitors as columns on the Advanced
+              Peer-to-Peer worksheet. Data is pulled from Yahoo Finance and Finviz, matching the spreadsheet
+              workflow.
             </p>
             <p className="fundamentals-note">
               <strong>No npm required on your computer.</strong> Use the full hosted app (UI + data) after a
