@@ -40,6 +40,6 @@ app.get(/^(?!\/api).*/, (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'))
 })
 
-app.listen(PORT, () => {
-  console.log(`Fundamentals API listening on http://127.0.0.1:${PORT}`)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Fundamentals API listening on 0.0.0.0:${PORT}`)
 })

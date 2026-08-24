@@ -2,10 +2,14 @@ services:
   - type: web
     name: fundamentals
     runtime: node
-    buildCommand: npm install && npm run build
+    # Vite and TypeScript are devDependencies. Render sets NODE_ENV=production
+    # during build, so a plain npm install omits them and `npm run build` fails.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     plan: free
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: '22'
