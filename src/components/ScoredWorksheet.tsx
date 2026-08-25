@@ -1,75 +1,84 @@
 import { formatPercent, formatRatio, formatValue } from '../lib/format.ts'
-import type { ScoredRow } from '../types.ts'
+import type { AnalysisResult, ScoredRow } from '../types.ts'
 
-export function ScoredWorksheet({
-  rows,
-  grandTotal,
-  totalPossible,
-  performanceRating,
-  ticker,
-}: {
-  rows: ScoredRow[]
-  grandTotal: number | null
-  totalPossible: number
-  performanceRating: number | null
-  ticker: string
-}) {
+function formatScoredValue(row: ScoredRow): string {
+  if (typeof row.value === 'number') {
+    return row.label.toLowerCase().includes('growth') || row.label.includes('Yield') || row.label.includes('RO')
+      ? formatPercent(row.value)
+      : formatRatio(row.value)
+  }
+  return formatValue(row.value)
+}
+
+export function ScoredWorksheet({ analyses }: { analyses: AnalysisResult[] }) {
+  if (!analyses.length) return null
+  const template = analyses[0].scored
+  const colSpan = 1 + analyses.length
+
   return (
     <section className="worksheet-panel">
       <div className="scored-summary">
-        <div>
-          <span className="scored-label">Grand total</span>
-          <strong>{grandTotal ?? '—'}</strong>
-          <span className="scored-muted">/ {totalPossible}</span>
-        </div>
-        <div>
-          <span className="scored-label">Performance rating</span>
-          <strong>{performanceRating != null ? formatPercent(performanceRating, 0) : '—'}</strong>
-        </div>
+        {analyses.map((analysis) => (
+          <div key={analysis.worksheet.ticker}>
+            <span className="scored-label">{analysis.worksheet.ticker}</span>
+            <strong>{analysis.grandTotal ?? '—'}</strong>
+            <span className="scored-muted">/ {analysis.totalPossible}</span>
+            <span className="scored-rating">
+              {analysis.performanceRating != null ? formatPercent(analysis.performanceRating, 0) : '—'}
+            </span>
+          </div>
+        ))}
       </div>
 
       <table className="worksheet-table scored-table">
         <thead>
           <tr>
-            <th>Criteria ↓</th>
-            <th>{ticker}</th>
-            <th>Score</th>
+            <th>Criteria</th>
+            {analyses.map((analysis) => (
+              <th key={analysis.worksheet.ticker}>{analysis.worksheet.ticker}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
+          {template.map((row) => {
             if (row.isSectionHeader) {
               return (
                 <tr key={row.id} className="worksheet-section">
-                  <td colSpan={3}>{row.label}</td>
+                  <td colSpan={colSpan}>{row.label}</td>
                 </tr>
               )
             }
 
-            const value =
-              typeof row.value === 'number'
-                ? row.label.toLowerCase().includes('growth') || row.label.includes('Yield') || row.label.includes('RO')
-                  ? formatPercent(row.value)
-                  : formatRatio(row.value)
-                : formatValue(row.value)
-
             return (
               <tr
                 key={row.id}
-                className={[
-                  row.highlight ? `highlight-${row.highlight}` : '',
-                  row.isSegmentScore ? 'segment-score' : '',
-                  row.isGrandTotal ? 'grand-total' : '',
-                ]
+                className={[row.isSegmentScore ? 'segment-score' : '', row.isGrandTotal ? 'grand-total' : '']
                   .filter(Boolean)
                   .join(' ')}
               >
                 <td>{row.label}</td>
-                <td>
-                  {value}
-                  {row.scoreDetail ? <span className="score-detail"> {row.scoreDetail}</span> : null}
-                </td>
-                <td>{row.score != null ? row.score : '—'}</td>
+                {analyses.map((analysis) => {
+                  const cell = analysis.scored.find((item) => item.id === row.id) ?? row
+                  const value = formatScoredValue(cell)
+                  return (
+                    <td
+                      key={analysis.worksheet.ticker}
+                      className={['peer-cell', cell.highlight ? `highlight-${cell.highlight}` : '']
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      {row.isSegmentScore || row.isGrandTotal ? (
+                        cell.score ?? '—'
+                      ) : (
+                        <>
+                          {value}
+                          {cell.scoreDetail ? <span className="score-detail"> {cell.scoreDetail}</span> : null}
+                          {cell.score != null ? <span className="cell-score"> {cell.score}</span> : null}
+                        </>
+                      )}
+                    </td>
+                  )
+                })}
               </tr>
             )
           })}

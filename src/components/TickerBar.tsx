@@ -1,37 +1,65 @@
 import { useState, type FormEvent } from 'react'
+import {
+  MAX_TICKERS,
+  TICKER_FIELD_NAMES,
+  TICKER_PLACEHOLDERS,
+  defaultTickerInputs,
+  readTickerForm,
+} from '../lib/tickers.ts'
 
 export function TickerBar({
-  ticker,
+  tickers,
   loading,
+  progress,
   onAnalyze,
 }: {
-  ticker: string
+  tickers: string[]
   loading: boolean
-  onAnalyze: (symbol: string) => void
+  progress?: string | null
+  onAnalyze: (symbols: string[]) => void
 }) {
-  const [input, setInput] = useState(ticker)
+  const [inputs, setInputs] = useState(() => defaultTickerInputs(tickers))
 
-  function submit(e: FormEvent) {
+  function setInput(index: number, value: string) {
+    setInputs((prev) => prev.map((item, i) => (i === index ? value.toUpperCase() : item)))
+  }
+
+  function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    onAnalyze(input)
+    onAnalyze(readTickerForm(e.currentTarget))
   }
 
   return (
     <form className="ticker-bar" onSubmit={submit}>
-      <label htmlFor="ticker-input">Stock ticker</label>
-      <input
-        id="ticker-input"
-        name="ticker"
-        value={input}
-        onChange={(e) => setInput(e.target.value.toUpperCase())}
-        placeholder="AAPL"
-        autoComplete="off"
-        spellCheck={false}
-        maxLength={12}
-      />
-      <button type="submit" disabled={loading || !input.trim()}>
-        {loading ? 'Fetching…' : ticker ? 'Refresh' : 'Analyze'}
+      <p className="ticker-bar-legend">Compare up to {MAX_TICKERS} competitors</p>
+      <div className="ticker-bar-fields">
+        {inputs.map((value, index) => {
+          const id = `ticker-input-${index + 1}`
+          return (
+            <div className="ticker-field" key={id}>
+              <label htmlFor={id}>Ticker {index + 1}</label>
+              <input
+                id={id}
+                name={TICKER_FIELD_NAMES[index]}
+                value={value}
+                onChange={(e) => setInput(index, e.target.value)}
+                placeholder={TICKER_PLACEHOLDERS[index]}
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={12}
+              />
+            </div>
+          )
+        })}
+      </div>
+      <button type="submit" disabled={loading} aria-busy={loading}>
+        {loading ? 'Fetching…' : tickers.length ? 'Refresh' : 'Compare'}
       </button>
+      {progress ? (
+        <p className="ticker-progress" aria-live="polite">
+          {progress}
+        </p>
+      ) : null}
     </form>
   )
 }

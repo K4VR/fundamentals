@@ -11,43 +11,75 @@ import {
   setRuntimeApiUrl,
   StaticHostError,
 } from './lib/api.ts'
+import { parseTickerInputs } from './lib/tickers.ts'
 
 type Tab = 'advanced' | 'scored'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('advanced')
-  const [ticker, setTicker] = useState('')
+  const [tickers, setTickers] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [results, setResults] = useState<AnalysisResult[]>([])
   const [apiInput, setApiInput] = useState(() => getRuntimeApiUrl())
   const [apiStatus, setApiStatus] = useState<string | null>(null)
   const [showApiForm, setShowApiForm] = useState(
     () => typeof window !== 'undefined' && window.location.hostname.includes('github.io') && !bakedApiUrl(),
   )
 
-  const analyze = useCallback(async (symbol: string) => {
-    const next = symbol.trim().toUpperCase()
-    if (!next) return
-    setTicker(next)
+  const analyze = useCallback(async (symbols: string[]) => {
+    let list: string[]
+    try {
+      list = parseTickerInputs(symbols)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Enter a valid ticker symbol.')
+      return
+    }
+    if (!list.length) {
+      setError('Enter at least one ticker to compare.')
+      return
+    }
+
+    setTickers(list)
     setLoading(true)
     setError(null)
+    setResults([])
+    const next: AnalysisResult[] = []
+    const failures: string[] = []
+
     try {
-      const data = await analyzeTicker(next)
-      setResult(data)
-    } catch (err) {
-      setResult(null)
-      if (err instanceof StaticHostError) {
-        setShowApiForm(true)
-        setError(err.message)
-      } else {
-        const message = err instanceof Error ? err.message : 'Analysis failed.'
-        if (message.includes('web page instead of JSON') || message.includes('non-JSON')) {
-          setShowApiForm(true)
+      for (let i = 0; i < list.length; i++) {
+        const symbol = list[i]
+        setProgress(`Fetching ${symbol}… ${i + 1} of ${list.length}`)
+        try {
+          const data = await analyzeTicker(symbol)
+          next.push(data)
+          setResults([...next])
+        } catch (err) {
+          if (err instanceof StaticHostError) {
+            setShowApiForm(true)
+            setError(err.message)
+            setResults([])
+            return
+          }
+          const message = err instanceof Error ? err.message : 'Analysis failed.'
+          if (message.includes('web page instead of JSON') || message.includes('non-JSON')) {
+            setShowApiForm(true)
+          }
+          failures.push(`${symbol}: ${message}`)
         }
-        setError(message)
+      }
+
+      if (failures.length) {
+        setError(
+          next.length
+            ? `Loaded ${next.map((r) => r.worksheet.ticker).join(', ')}. Could not load ${failures.join(' · ')}`
+            : failures.join(' · '),
+        )
       }
     } finally {
+      setProgress(null)
       setLoading(false)
     }
   }, [])
@@ -64,7 +96,7 @@ export default function App() {
       await pingApi(cleaned)
       setApiStatus(`Saved. Live fetches will use ${cleaned}`)
       setError(null)
-      if (ticker) void analyze(ticker)
+      if (tickers.length) void analyze(tickers)
     } catch (err) {
       setApiStatus(err instanceof Error ? err.message : 'Could not reach that API URL.')
     }
@@ -90,16 +122,21 @@ export default function App() {
       </header>
 
       <main className="fundamentals-main">
-        <TickerBar ticker={ticker} loading={loading} onAnalyze={analyze} />
+        <TickerBar tickers={tickers} loading={loading} progress={progress} onAnalyze={analyze} />
 
         {error ? <p className="fundamentals-error">{error}</p> : null}
 
-        {!result && !loading ? (
+        {loading && !results.length ? (
+          <p className="fundamentals-loading">{progress ?? 'Fetching ticker data…'}</p>
+        ) : null}
+
+        {!results.length && !loading ? (
           <section className="fundamentals-empty">
             <h1>Fundamental stock evaluation</h1>
             <p>
-              Enter a ticker to populate the Advanced Peer-to-Peer worksheet. Data is pulled from Yahoo Finance
-              and Finviz, matching the spreadsheet workflow.
+              Enter up to four tickers (or keep the examples) to compare competitors as columns on the Advanced
+              Peer-to-Peer worksheet. Data is pulled from Yahoo Finance and Finviz, matching the spreadsheet
+              workflow.
             </p>
             <p className="fundamentals-note">
               <strong>No npm required on your computer.</strong> Use the full hosted app (UI + data) after a
@@ -147,39 +184,35 @@ export default function App() {
           </section>
         ) : null}
 
-        {result ? (
+        {results.length ? (
           <>
-            <div className="fundamentals-meta">
-              <div>
-                <h2>{result.worksheet.ticker}</h2>
-                {result.worksheet.companyName ? <p>{result.worksheet.companyName}</p> : null}
-              </div>
-              <div className="fundamentals-meta-links">
-                <a href={result.worksheet.sources.yahooAnalysis} target="_blank" rel="noreferrer">
-                  Yahoo Analysis
-                </a>
-                <a href={result.worksheet.sources.finvizStatistics} target="_blank" rel="noreferrer">
-                  Finviz Statistics
-                </a>
-                <a href={result.worksheet.sources.marketWatch} target="_blank" rel="noreferrer">
-                  MarketWatch
-                </a>
-              </div>
+            <div className="fundamentals-meta peers">
+              {results.map((result) => (
+                <div key={result.worksheet.ticker} className="peer-card">
+                  <h2>{result.worksheet.ticker}</h2>
+                  {result.worksheet.companyName ? <p>{result.worksheet.companyName}</p> : null}
+                  <div className="fundamentals-meta-links">
+                    <a href={result.worksheet.sources.yahooAnalysis} target="_blank" rel="noreferrer">
+                      Yahoo
+                    </a>
+                    <a href={result.worksheet.sources.finvizStatistics} target="_blank" rel="noreferrer">
+                      Finviz
+                    </a>
+                    <a href={result.worksheet.sources.marketWatch} target="_blank" rel="noreferrer">
+                      MarketWatch
+                    </a>
+                  </div>
+                </div>
+              ))}
               <p className="fundamentals-fetched">
-                Fetched {new Date(result.worksheet.fetchedAt).toLocaleString()}
+                Fetched {new Date(results[results.length - 1].worksheet.fetchedAt).toLocaleString()}
               </p>
             </div>
 
             {tab === 'advanced' ? (
-              <AdvancedWorksheet worksheet={result.worksheet} />
+              <AdvancedWorksheet worksheets={results.map((result) => result.worksheet)} />
             ) : (
-              <ScoredWorksheet
-                rows={result.scored}
-                grandTotal={result.grandTotal}
-                totalPossible={result.totalPossible}
-                performanceRating={result.performanceRating}
-                ticker={result.worksheet.ticker}
-              />
+              <ScoredWorksheet analyses={results} />
             )}
           </>
         ) : null}

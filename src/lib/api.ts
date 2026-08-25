@@ -103,7 +103,9 @@ export async function analyzeTicker(ticker: string): Promise<AnalysisResult> {
   }
 
   try {
-    const resp = await fetch(apiUrl(`/api/analyze/${encodeURIComponent(ticker)}`))
+    const resp = await fetch(apiUrl(`/api/analyze/${encodeURIComponent(ticker)}`), {
+      signal: AbortSignal.timeout(120_000),
+    })
     const data = await readApiJson(resp)
     if (!resp.ok) {
       throw new Error(typeof data.error === 'string' ? data.error : 'Analysis failed.')
@@ -111,6 +113,9 @@ export async function analyzeTicker(ticker: string): Promise<AnalysisResult> {
     return data as unknown as AnalysisResult
   } catch (err) {
     if (err instanceof StaticHostError) throw err
+    if (err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      throw new Error(`Timed out waiting for ${ticker}. Try again in a moment.`)
+    }
     if (err instanceof TypeError) {
       throw new Error(
         'Could not reach the Fundamentals API. On GitHub Pages, paste your Render URL below; locally run npm run dev so the UI proxies /api.',
